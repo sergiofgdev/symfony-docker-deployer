@@ -8,7 +8,7 @@ require 'recipe/symfony.php';
 // Project Configuration
 // =============================================================================
 set('application', 'app_db');
-set('repository', 'git@github.com:github-account/project-name.git');
+set('repository', 'git@github.com:user/repository.git');
 set('keep_releases', 3);
 set('default_timeout', 600);
 set('docker_project_name', 'project-name');
