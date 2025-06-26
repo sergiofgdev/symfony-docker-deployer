@@ -1,0 +1,52 @@
+# ==============================================================================
+# Development Docker Compose Override
+#
+# This file contains configuration specific to the local development environment.
+# Docker Compose automatically picks it up when it exists.
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # PHP Service (Development Override)
+  # --------------------------------------------------------------------------
+  php:
+    build:
+      # Use the main Dockerfile in the current directory.
+      context: .
+      # Build the 'frankenphp_dev' stage, which includes Xdebug and watchers.
+      target: frankenphp_dev
+    volumes:
+      # Mount the entire project directory into the container for live code changes.
+      - ./:/app
+      # Mount specific configuration files to override the base ones.
+      - ./frankenphp/Caddyfile:/etc/frankenphp/Caddyfile:ro
+      - ./frankenphp/conf.d/20-app.dev.ini:/usr/local/etc/php/app.conf.d/20-app.dev.ini:ro
+      # Uncomment the next line on macOS or Windows for better performance by
+      # keeping the 'vendor' directory inside the container's filesystem.
+      #- /app/vendor
+    environment:
+      # Enable FrankenPHP's file watcher.
+      FRANKENPHP_WORKER_CONFIG: watch
+      # Enable the Mercure demo endpoint.
+      MERCURE_EXTRA_DIRECTIVES: demo
+      # Configure Xdebug mode. Can be overridden from the host.
+      # See https://xdebug.org/docs/all_settings#mode
+      XDEBUG_MODE: "${XDEBUG_MODE:-off}"
+      # Set the application environment to 'dev'.
+      APP_ENV: "${APP_ENV:-dev}"
+    extra_hosts:
+      # Ensure host.docker.internal resolves correctly on Linux for Xdebug.
+      - host.docker.internal:host-gateway
+    # Allocate a TTY for better interactive shell experience.
+    tty: true
+  
+  # --------------------------------------------------------------------------
+  # Database Service (Development Override)
+  # --------------------------------------------------------------------------
+  ###> doctrine/doctrine-bundle ###
+  database:
+    ports:
+      # Expose the database port to the host machine for direct access
+      # with a database client during development.
+      - "5432"
+###< doctrine/doctrine-bundle ###

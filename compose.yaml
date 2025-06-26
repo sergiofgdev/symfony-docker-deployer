@@ -1,0 +1,81 @@
+# ==============================================================================
+# Base Docker Compose Configuration
+#
+# This file defines the core services, networks, and volumes for the application.
+# It is intended to be used as a base for both development and production
+# and can be extended by other compose files.
+# ==============================================================================
+
+services:
+    # --------------------------------------------------------------------------
+    # PHP Service (Application Server)
+    # --------------------------------------------------------------------------
+    php:
+        # The image is built from the Dockerfile and tagged dynamically.
+        image: ${IMAGES_PREFIX:-}app-php
+        restart: unless-stopped
+        environment:
+            # Mercure JWT keys for publishing and subscribing.
+            MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+            MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+
+            # Mercure integration URLs.
+            MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
+            MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}:${HTTPS_PORT:-443}/.well-known/mercure}
+            MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
+            # These variables can be removed after the initial Symfony installation.n
+            SYMFONY_VERSION: ${SYMFONY_VERSION:-}
+            STABILITY: ${STABILITY:-stable}
+        volumes:
+            # Use named volumes for Caddy data and configuration to persist them.
+            - caddy_data:/data
+            - caddy_config:/config
+        ports:
+            # HTTP
+            -   target: 80
+                published: ${HTTP_PORT:-80}
+                protocol: tcp
+            # HTTPS
+            -   target: 443
+                published: ${HTTPS_PORT:-443}
+                protocol: tcp
+            # HTTP/3
+            -   target: 443
+                published: ${HTTP3_PORT:-443}
+                protocol: udp
+    
+    # --------------------------------------------------------------------------
+    # Database Service (PostgreSQL)
+    # --------------------------------------------------------------------------
+    ###> doctrine/doctrine-bundle ###
+    database:
+        image: postgres:${POSTGRES_VERSION:-16}-alpine
+        environment:
+            POSTGRES_DB: ${POSTGRES_DB:-app_db}
+            POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-!ChangeMe!}
+            POSTGRES_USER: ${POSTGRES_USER:-user}
+        ports:
+            # Binds the container's port 5432 to the host's loopback interface.
+            # This prevents external access to the database for security.
+            - "127.0.0.1:5432:5432"
+        healthcheck:
+            test: [ "CMD", "pg_isready", "-d", "${POSTGRES_DB:-app_db}", "-U", "${POSTGRES_USER:-user}" ]
+            timeout: 5s
+            retries: 5
+            start_period: 60s
+        volumes:
+            # Persists database data using a named volume.
+            - database_data:/var/lib/postgresql/data:rw
+        # Alternatively, use a bind mount for easier access and backup from the host.
+        # - ./docker/db/data:/var/lib/postgresql/data:rw
+    ###< doctrine/doctrine-bundle ###
+
+# ==============================================================================
+# Volumes
+# ==============================================================================
+volumes:
+    caddy_data:
+    caddy_config:
+    ###> doctrine/doctrine-bundle ###
+    database_data:
+    ###< doctrine/doctrine-bundle ###

@@ -1,0 +1,30 @@
+# ==============================================================================
+# Production Docker Compose Override
+#
+# This file contains configuration specific to the production environment.
+# It should be used with the base compose.yaml file.
+# (e.g., docker compose -f compose.yaml -f compose.prod.yaml up)
+# ==============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # PHP Service (Production Override)
+  # --------------------------------------------------------------------------
+  php:
+    build:
+      # Use the main Dockerfile in the current directory.
+      context: .
+      # Build the 'frankenphp_prod' stage for the production image.
+      target: frankenphp_prod
+    # Passing local environment variables to containers
+    env_file:
+      - .env.prod.local
+    volumes:
+      # Mounts the secrets file inside the container so that Symfony can read it.
+      - ./.env.prod.local:/app/.env.prod.local:ro
+    environment:
+      # Pass production secrets from the host environment.
+      APP_SECRET: ${APP_SECRET}
+      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET}
+  
